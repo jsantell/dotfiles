@@ -1,4 +1,6 @@
-# ~
+# dotfiles
+
+Personal bash configurations. YMMV.
 
 ## Installation
 
