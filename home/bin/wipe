@@ -1,0 +1,86 @@
+#!/bin/bash
+
+# Copyright 2020 Jordan Santell. All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This will create an encrypted drive on the specified target
+# using an ephemeral passphrase and zero out the unencrypted drive,
+# such that the zeros are encrypted. Finally, the LUKS header is destroyed.
+#
+# Usage:
+# wipe [TARGET]
+#
+# Example:
+# wipe /dev/sdb
+
+PASSPHRASE_LENGTH=512
+TEMP_MOUNT_NAME=temp_mount
+PASSPHRASE="$(openssl rand -base64 $PASSPHRASE_LENGTH)"
+TARGET=$1
+
+# Helpful links on implementation:
+# https://wiki.archlinux.org/index.php/Securely_wipe_disk
+# https://www.linux.com/tutorials/how-full-encrypt-your-system-lvm-luks-cli
+
+function encryptDrive () {
+  # Generate a 512 character passphrase for encrypting
+  echo "Creating encrypted drive on $TARGET with ephemeral password..."
+  # Note, stdin must not have a newline, hence `echo -n`
+  echo -n $PASSPHRASE | sudo cryptsetup --key-file=- luksFormat $TARGET
+  RESULT=$?
+
+  # luksFormat can fail if the drive is mounted, for example.
+  if [ $RESULT -ne 0 ]; then
+    echo "Error: $RESULT"
+    exit $RESULT
+  fi
+
+  echo "Encrypted drive created."
+}
+
+function zeroDrive () {
+  # First, mount the drive.
+  echo "Opening encrypted drive."
+  echo -n $PASSPHRASE | sudo cryptsetup --key-file=- luksOpen $TARGET $TEMP_MOUNT_NAME
+
+  #TODO look into setting blocksize via:
+  # `cat /sys/class/block/sdX/queue/physical_block_size`
+  # `cat /sys/class/block/sdX/queue/logical_block_size`
+  echo "Zeroing out $TARGET..."
+  sudo dd status=progress if=/dev/zero of=/dev/mapper/$TEMP_MOUNT_NAME bs=1M; sync
+  echo "Zeroing out success."
+
+  echo "Closing encrypted drive."
+  cryptsetup luksClose $TEMP_MOUNT_NAME
+}
+
+function wipeLUKSHeader () {
+  # Size of the LUKS header depends on version. Just do 20MB.
+  # https://wiki.archlinux.org/index.php/Dm-crypt/Drive_preparation
+  echo "Wiping LUKS header with random data..."
+  sudo dd if=/dev/urandom of=$TARGET bs=512 count=40960; sync
+  echo "Wiping LUKS header success."
+}
+
+function main () {
+  echo "Wiping drive $TARGET..."
+
+  encryptDrive
+  zeroDrive
+  wipeLUKSHeader
+
+  echo "Done!"
+}
+
+main

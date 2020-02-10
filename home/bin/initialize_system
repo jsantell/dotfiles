@@ -1,0 +1,80 @@
+#!/bin/sh
+
+LATEST_NVM=0.35.2
+
+# Update system
+sudo apt-get update
+sudo apt-get upgrade
+
+# Enable firewall
+sudo ufw enable
+
+# Add software
+sudo apt-get install \
+git vim xclip curl snap \
+gnome-tweaks \
+gddrescue ngrep \
+glances \
+
+# Tiling manager
+
+git clone https://github.com/PapyElGringo/material-shell.git ~/.local/share/gnome-shell/extensions/material-shell@papyelgringo
+sudo apt-get install gnome-tweaks
+gnome-shell-extension-tool -e material-shell@papyelgringo
+# requires reloading x11
+
+# Add snaps
+snap install firefox
+snap install chromium
+snap install ssb-patchwork
+snap install beaker-browser
+snap install code --classic
+
+# VSCode extensions
+code --install-extension vscodevim.vim
+
+# NVM
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v$LATEST_NVM/install.sh | bash
+
+# Uninstall garbage, out-of-date apps
+sudo apt-get remove --purge \
+aisleriot \
+mahjongg \
+ace-of-penguins \
+gnomine \
+gbrainy \
+gnome-sushi \
+gnome-taquin \
+gnome-tetravex \
+gnome-robots \
+gnome-chess \
+lightsoff \
+swell-foop \
+quadrapassel \
+gnome-mahjongg \
+gnome-mines \
+gnome-sudoku \
+unity-lens-music \
+unity-lens-photos \
+unity-lens-video \
+unity-scope-colourlovers \
+unity-scope-devhelp \
+unity-scope-firefoxbookmarks \
+unity-scope-home \
+unity-scope-openclipart \
+unity-scope-texdoc \
+unity-scope-tomboy \
+unity-scope-video-remote \
+unity-scope-virtualbox \
+unity-scope-zotero \
+unity-webapps-common \
+ubuntu-web-launchers \
+libreoffice* \
+remmina \
+firefox \
+thunderbird \
+chromium
+
+sudo apt-get clean 
+sudo apt-get autoremove
+

@@ -1,0 +1,118 @@
+#
+# System
+#
+
+if [ $UID -ne 0 ]; then
+  alias reboot='sudo reboot 0'
+  alias shutdown='sudo shutdown 0'
+  alias install='sudo apt install'
+  alias update='sudo apt update && sudo apt upgrade'
+fi
+
+alias search='apt search'
+
+# Enable aliases to be sudo’ed
+# TODO is this necessary?
+# alias sudo='sudo '
+
+# Defensive aliasing; confirmation and permission preservation
+alias mv='mv -i'
+alias cp='cp -i'
+alias ln='ln -i'
+alias chown='chown --preserve-root'
+alias chmod='chmod --preserve-root'
+alias chgrp='chgrp --preserve-root'
+alias rm='rm -I --preserve-root'
+
+alias mkdir='mkdir -pv'
+
+# Easier navigation: .., ..., ...., ....., ~ and -
+alias ..="cd .."
+alias ...="cd ../.."
+alias ....="cd ../../.."
+alias .....="cd ../../../.."
+alias -- -="cd -"
+
+alias h='history'
+
+alias ls='ls --color=auto'
+alias ll='ls -lF'
+alias la='ls -lAF'
+alias lc='ls -CAF'
+alias lsd="la | grep --color=never '^d'" # List only directories
+export LS_COLORS='no=00:fi=00:di=01;34:ln=01;36:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.gz=01;31:*.bz2=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.avi=01;35:*.fli=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.ogg=01;35:*.mp3=01;35:*.wav=01;35:'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+#
+# Utilities
+#
+
+# Add an "alert" alias for long running commands.  Use like so:
+#   sleep 10; alert
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+
+alias vi=vim
+alias sha1='openssl sha1'
+#alias du='du -csh .[!.]* * | sort -h'
+alias say='sdp-say'
+
+alias pbcopy='xclip -sel clipboard'
+alias pbpaste='xclip -sel clipboard -o'
+
+# audio restart
+alias audiorestart='pulseaudio -k && sudo alsa force-reload'
+
+# Stopwatch
+alias timer='echo "Timer started. Stop with Ctrl-D." && date && time cat && date'
+# Diplay weather
+alias weather='curl http://wttr.in'
+# alias weather='curl https://adventurous-chess.glitch.me/:lat/:lon'
+
+# Intuitive map function
+# For example, to list all directories that contain a certain file:
+# find . -name .gitattributes | map dirname
+alias map="xargs -n1"
+
+# IP addresses
+# alias ip="dig +short myip.opendns.com @resolver1.opendns.com" # doesn't work currently
+alias localip="sudo ifconfig | grep -Eo 'inet (addr:)?([0-9]*\\.){3}[0-9]*' | grep -Eo '([0-9]*\\.){3}[0-9]*' | grep -v '127.0.0.1'"
+alias ips="sudo ifconfig -a | grep -o 'inet6\\? \\(addr:\\)\\?\\s\\?\\(\\(\\([0-9]\\+\\.\\)\\{3\\}[0-9]\\+\\)\\|[a-fA-F0-9:]\\+\\)' | awk '{ sub(/inet6? (addr:)? ?/, \"\"); print }'"
+
+# Enhanced WHOIS lookups
+alias whois="whois -h whois-servers.net"
+# View HTTP traffic
+alias sniff="sudo ngrep -d 'en1' -t '^(GET|POST) ' 'tcp and port 80'"
+alias httpdump="sudo tcpdump -i en1 -n -s 0 -w - | grep -a -o -E \"Host\: .*|GET \/.*\""
+
+#
+# Git
+#
+alias g='git'
+alias gpu='git stash && git pull --rebase && git stash pop'
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gpom='git push origin master'
+alias squash='git rebase -i HEAD~$1'
+
+# Unused, but interesting??
+# Trim new lines and copy to clipboard
+# alias c="tr -d '\n' | pbcopy"
+
+# Recursively delete `.DS_Store` files
+# alias cleanup="find . -type f -name '*.DS_Store' -ls -delete"
+# URL-encode strings
+# alias urlencode='python -c "import sys, urllib as ul; print ul.quote_plus(sys.argv[1]);"'
+# Kill all the tabs in Chrome to free up memory
+# [C] explained: http://www.commandlinefu.com/commands/view/402/exclude-grep-from-your-grepped-output-of-ps-alias-included-in-description
+# alias chromekill="ps ux | grep '[C]hrome Helper --type=renderer' | grep -v extension-process | tr -s ' ' | cut -d ' ' -f2 | xargs kill"
+
+# Reload the shell (i.e. invoke as a login shell)
+# alias reload="exec $SHELL -l"
+# One of @janmoesen’s ProTip™s
+#for method in GET HEAD POST PUT DELETE TRACE OPTIONS; do
+#	alias "$method"="lwp-request -m '$method'"
+#done
