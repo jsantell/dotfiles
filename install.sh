@@ -7,7 +7,7 @@ cd "$(dirname "${BASH_SOURCE}")";
 git pull origin master;
 
 function installFiles() {
-  rsync -avh --no-perms home/ ~;
+  rsync -avh --no-perms dotfiles/ ~;
   source ~/.bash_profile
 }
 
