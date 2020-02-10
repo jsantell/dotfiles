@@ -1,0 +1,58 @@
+#!/bin/sh
+# via https://gist.github.com/davidmerrick/c189d31a4f3d186f187846c1f6656964
+# Note: This script requires that you have $GITHUB_TOKEN set.
+# Get one here: https://github.com/settings/tokens
+
+# can replace "users" in the URL below with "orgs/$ORG/"
+OWNER=jsantell
+DIRECTORY=~/.ghbackup
+REPO_OUTPUT_FILE=ghdata.json
+SYNC=false
+REPO_TMP_FILE=results
+
+set -e
+
+cd $DIRECTORY
+mkdir -p .gh_raw_repos
+
+if [ "$SYNC" = true ] ; then
+  HAS_NEXT=true
+  i=1
+
+  rm -rf .gh_raw_repos/*
+
+  while $HAS_NEXT
+  do
+    echo "Querying page $i"
+
+    # The API call will return all repos owner has access to.
+    REPOS=$(curl "https://api.github.com/user/repos?per_page=100&page=$i" \
+        -H "Accept: application/vnd.github.v3+json" \
+	-H "Authorization: Bearer $GITHUB_TOKEN")
+    LENGTH=$(echo $REPOS | jq '. | length') 
+    echo "$LENGTH repos queried"
+
+    if [ $LENGTH -eq 0 ]; then
+      HAS_NEXT=false
+    else
+      echo $REPOS > ".gh_raw_repos/results_$i"
+    fi
+
+    i=$(expr $i + 1)
+  done
+
+  # Reducing
+  jq 'reduce inputs as $s (.; . += $s)' .gh_raw_repos/results_* > .gh_raw_repos/all-results.json
+fi
+
+# Take the raw, giant list of repo data,
+# filter out others' repos that we have access to, unless specified
+# as well as forks.
+FILTERED=$(cat .gh_raw_repos/all-results.json | jq "[.[] | select(.owner.login == \"$OWNER\") | select(.fork != true)]")
+LENGTH=$(echo $FILTERED | jq ". | length")
+echo "Cloning $LENGTH repositories"
+
+# Map the filtered repos to the clone url
+URLS=$(echo $FILTERED | jq ".[].ssh_url")
+
+echo $URLS | xargs -n 1 git clone

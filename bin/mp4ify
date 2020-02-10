@@ -1,0 +1,8 @@
+#!/bin/sh
+
+ffmpeg -i $1 \
+  -an \
+  -vcodec h264 \
+  -strict -2 \
+  -movflags +faststart \
+  "$2.mp4"
