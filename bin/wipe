@@ -17,6 +17,7 @@
 TARGET=""
 BLOCKSIZE=1M
 PASSPHRASE_LENGTH=512
+RUN_TESTS=""
 
 usage() {
   echo "Usage: "
@@ -32,9 +33,9 @@ usage() {
   echo "header is destroyed by random bytes."
   echo " "
   echo "Options:"
-  echo " -b=BYTES       Block size to use when writing to disk (default: 1M)."
+  echo " -b BYTES       Block size to use when writing to disk (default: 1M)."
   echo "                Can use multiplicative suffixes like dd's BYTES, e.g. 5kB, 1MB."
-  echo " -p=LENGTH      Length of ephemeral passphrase for encryption (default: 512)."
+  echo " -p LENGTH      Length of ephemeral passphrase for encryption (default: 512)."
   echo " -h             Show help and options."
   echo " "
   echo "********************************************************************************"
@@ -47,9 +48,9 @@ usage() {
   exit 0
 }
 
-while getopts ":hb:p:" arg; do
+while getopts ":hxb:p:" arg; do
   case "${arg}" in
-    b)
+    p)
       PASSPHRASE_LENGTH=${OPTARG}
       ;;
     b)
@@ -57,6 +58,11 @@ while getopts ":hb:p:" arg; do
       ;;
     h)
       usage
+      ;;
+    x)
+      # "tests" in this case print out the values of different
+      # parameters.
+      RUN_TESTS="true"
       ;;
     *)
       echo "Unknown flag: ${arg}"
@@ -67,12 +73,6 @@ done
 shift $((OPTIND-1))
 
 TARGET=$1
-
-if [ -z "${TARGET}" ]; then
-    usage
-fi
-
-
 TEMP_MOUNT_NAME=temp_mount
 PASSPHRASE="$(openssl rand -base64 $PASSPHRASE_LENGTH)"
 
@@ -80,7 +80,7 @@ PASSPHRASE="$(openssl rand -base64 $PASSPHRASE_LENGTH)"
 # https://wiki.archlinux.org/index.php/Securely_wipe_disk
 # https://www.linux.com/tutorials/how-full-encrypt-your-system-lvm-luks-cli
 
-function encryptDrive () {
+function encrypt_drive () {
   # Generate a 512 character passphrase for encrypting
   echo " "
   echo "Creating encrypted partition on $TARGET with ephemeral password..."
@@ -97,7 +97,7 @@ function encryptDrive () {
   echo "Encrypted partition created."
 }
 
-function zeroDrive () {
+function zero_drive () {
   # First, mount the drive.
   echo "Opening encrypted partition."
   echo -n $PASSPHRASE | sudo cryptsetup --key-file=- luksOpen $TARGET $TEMP_MOUNT_NAME
@@ -113,7 +113,7 @@ function zeroDrive () {
   cryptsetup luksClose $TEMP_MOUNT_NAME
 }
 
-function wipeLUKSHeader () {
+function wipe_luks_header () {
   # Size of the LUKS header depends on version. Just do 20MB.
   # https://wiki.archlinux.org/index.php/Dm-crypt/Drive_preparation
   echo "Wiping LUKS header with random data..."
@@ -121,11 +121,28 @@ function wipeLUKSHeader () {
   echo "Wiping LUKS header success."
 }
 
+function run_tests () {
+  echo "Printing out debug values:"
+  echo " "
+  echo "BLOCKSIZE: $BLOCKSIZE"
+  echo "PASSPHRASE_LENGTH: $PASSPHRASE_LENGTH"
+  echo "TARGET: $TARGET"
+  exit 0
+}
 
-echo "Wiping drive $TARGET..."
 
-encryptDrive
-zeroDrive
-wipeLUKSHeader
 
-echo "Done!"
+if [ -n "${RUN_TESTS}" ]; then
+  run_tests
+elif [ -z "${TARGET}" ]; then
+  usage
+else
+  echo "Wiping drive $TARGET..."
+
+  encrypt_drive
+  zero_drive
+  wipe_luks_header
+  echo "Done!"
+fi
+
+
