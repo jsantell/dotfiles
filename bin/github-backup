@@ -3,6 +3,11 @@
 # Note: This script requires that you have $GITHUB_TOKEN set.
 # Get one here: https://github.com/settings/tokens
 
+# TODO
+# investigate if something like this would work
+# https://gist.github.com/rodw/3073987
+# 
+
 # can replace "users" in the URL below with "orgs/$ORG/"
 OWNER=jsantell
 DIRECTORY=~/.ghbackup

@@ -15,6 +15,7 @@ git vim xclip curl snap \
 gnome-tweaks \
 gddrescue ngrep \
 glances \
+jq \
 
 # Tiling manager
 

@@ -14,20 +14,67 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# This will create an encrypted drive on the specified target
-# using an ephemeral passphrase and zero out the unencrypted drive,
-# such that the zeros are encrypted. Finally, the LUKS header is destroyed.
-#
-# Usage:
-# wipe [TARGET]
-#
-# Example:
-# wipe /dev/sdb
-
+TARGET=""
+BLOCKSIZE=1M
 PASSPHRASE_LENGTH=512
+
+usage() {
+  echo "Usage: "
+  echo " wipe [OPTION]... [DEVICE]"
+  echo " wipe -h"
+  echo " "
+  echo "Example: "
+  echo " wipe -b 1KB /dev/sdb"
+  echo " "
+  echo "Securely erases a device by creating an encrypted partition"
+  echo "on the specified device using an ephemeral passphrase, and "
+  echo "filling that device with encrypted zeros. Finally, the LUKS"
+  echo "header is destroyed by random bytes."
+  echo " "
+  echo "Options:"
+  echo " -b=BYTES       Block size to use when writing to disk (default: 1M)."
+  echo "                Can use multiplicative suffixes like dd's BYTES, e.g. 5kB, 1MB."
+  echo " -p=LENGTH      Length of ephemeral passphrase for encryption (default: 512)."
+  echo " -h             Show help and options."
+  echo " "
+  echo "********************************************************************************"
+  echo " "
+  echo " THIS IS UNTESTED PERSONAL SOFTWARE. "
+  echo " USE AT YOUR OWN RISK. THERE ARE NO GUARANTEES THAT "
+  echo " ANYTHING IS SECURELY ERASED. "
+  echo " "
+  echo "********************************************************************************"
+  exit 0
+}
+
+while getopts ":hb:p:" arg; do
+  case "${arg}" in
+    b)
+      PASSPHRASE_LENGTH=${OPTARG}
+      ;;
+    b)
+      BLOCKSIZE=${OPTARG}
+      ;;
+    h)
+      usage
+      ;;
+    *)
+      echo "Unknown flag: ${arg}"
+      exit 1
+      ;;
+  esac
+done
+shift $((OPTIND-1))
+
+TARGET=$1
+
+if [ -z "${TARGET}" ]; then
+    usage
+fi
+
+
 TEMP_MOUNT_NAME=temp_mount
 PASSPHRASE="$(openssl rand -base64 $PASSPHRASE_LENGTH)"
-TARGET=$1
 
 # Helpful links on implementation:
 # https://wiki.archlinux.org/index.php/Securely_wipe_disk
@@ -35,7 +82,8 @@ TARGET=$1
 
 function encryptDrive () {
   # Generate a 512 character passphrase for encrypting
-  echo "Creating encrypted drive on $TARGET with ephemeral password..."
+  echo " "
+  echo "Creating encrypted partition on $TARGET with ephemeral password..."
   # Note, stdin must not have a newline, hence `echo -n`
   echo -n $PASSPHRASE | sudo cryptsetup --key-file=- luksFormat $TARGET
   RESULT=$?
@@ -46,22 +94,22 @@ function encryptDrive () {
     exit $RESULT
   fi
 
-  echo "Encrypted drive created."
+  echo "Encrypted partition created."
 }
 
 function zeroDrive () {
   # First, mount the drive.
-  echo "Opening encrypted drive."
+  echo "Opening encrypted partition."
   echo -n $PASSPHRASE | sudo cryptsetup --key-file=- luksOpen $TARGET $TEMP_MOUNT_NAME
 
   #TODO look into setting blocksize via:
   # `cat /sys/class/block/sdX/queue/physical_block_size`
   # `cat /sys/class/block/sdX/queue/logical_block_size`
   echo "Zeroing out $TARGET..."
-  sudo dd status=progress if=/dev/zero of=/dev/mapper/$TEMP_MOUNT_NAME bs=1M; sync
+  sudo dd status=progress if=/dev/zero of=/dev/mapper/$TEMP_MOUNT_NAME bs=$BLOCKSIZE; sync
   echo "Zeroing out success."
 
-  echo "Closing encrypted drive."
+  echo "Closing encrypted partition."
   cryptsetup luksClose $TEMP_MOUNT_NAME
 }
 
@@ -69,18 +117,15 @@ function wipeLUKSHeader () {
   # Size of the LUKS header depends on version. Just do 20MB.
   # https://wiki.archlinux.org/index.php/Dm-crypt/Drive_preparation
   echo "Wiping LUKS header with random data..."
-  sudo dd if=/dev/urandom of=$TARGET bs=512 count=40960; sync
+  sudo dd if=/dev/urandom of=$TARGET bs=$BLOCKSIZE count=40960; sync
   echo "Wiping LUKS header success."
 }
 
-function main () {
-  echo "Wiping drive $TARGET..."
 
-  encryptDrive
-  zeroDrive
-  wipeLUKSHeader
+echo "Wiping drive $TARGET..."
 
-  echo "Done!"
-}
+encryptDrive
+zeroDrive
+wipeLUKSHeader
 
-main
+echo "Done!"
